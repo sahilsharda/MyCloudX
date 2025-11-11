@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MyCloudX — Your Personal Cloud</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 900px;
+      margin: 60px auto;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 32px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #a0a0a0;
+      font-size: 0.95rem;
+      margin-bottom: 25px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      background: rgba(255, 255, 255, 0.18);
+      transform: translateY(-2px);
+    }
+
+    input[type=password],
+    input[type=file] {
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      width: 60%;
+    }
+
+    button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      background: #00c6ff;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      background: #0072ff;
+      transform: scale(1.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+      padding: 10px;
+      text-align: left;
+    }
+
+    a {
+      color: #00c6ff;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .file-icon {
+      margin-right: 10px;
+      font-size: 1.2rem;
+    }
+
+    .muted {
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>☁️ MyCloudX</h1>
+    <p class="subtitle">Your private, personal cloud. Fast, secure, and yours only.</p>
+
+    <div class="card">
+      <h3>🔐 Authenticate</h3>
+      <input id="token" type="password" placeholder="Enter access token (default: secret123)">
+      <button onclick="login()">Login</button>
+      <p id="authStatus" class="muted"></p>
+    </div>
+
+    <div class="card">
+      <h3>📤 Upload File</h3>
+      <input id="file" type="file">
+      <button onclick="upload()">Upload</button>
+    </div>
+
+    <div class="card">
+      <h3>📁 Your Files</h3>
+      <button onclick="refresh()">🔄 Refresh</button>
+      <table>
+        <thead>
+          <tr><th>File</th><th>Action</th></tr>
+        </thead>
+        <tbody id="fileRows"><tr><td class="muted" colspan="2">No files uploaded yet</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+let TOKEN = "";
+function apiBase(){ return window.location.origin; }
+
+async function login(){
+  const t = document.getElementById('token').value.trim();
+  try{
+    const res = await fetch(apiBase()+"/auth", {
+      method:"POST",
+      body: new URLSearchParams({token:t})
+    });
+    if(!res.ok) throw new Error("Bad token");
+    TOKEN = t;
+    document.getElementById('authStatus').textContent = "✅ Authenticated";
+    refresh();
+  }catch(e){
+    TOKEN = "";
+    document.getElementById('authStatus').textContent = "❌ Invalid token";
+  }
+}
+
+async function upload(){
+  if(!TOKEN) return alert("Please log in first");
+  const f = document.getElementById('file').files[0];
+  if(!f) return alert("Select a file first");
+  const form = new FormData();
+  form.append("token", TOKEN);
+  form.append("file", f);
+  const res = await fetch(apiBase()+"/upload", { method:"POST", body: form });
+  if(res.ok){ alert("Uploaded ✅"); refresh(); } else{ alert("Upload failed ❌"); }
+}
+
+async function refresh(){
+  if(!TOKEN) return;
+  const res = await fetch(apiBase()+"/list?token="+encodeURIComponent(TOKEN));
+  if(!res.ok) return;
+  const data = await res.json();
+  const tbody = document.getElementById('fileRows');
+  tbody.innerHTML = "";
+  if(!data.files.length){
+    tbody.innerHTML = `<tr><td class="muted" colspan="2">No files uploaded yet</td></tr>`;
+    return;
+  }
+  for(const name of data.files){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>📄 ${name}</td>
+      <td>
+        <a href="${apiBase()}/download/${encodeURIComponent(name)}?token=${encodeURIComponent(TOKEN)}">⬇️ Download</a>
+        &nbsp;|&nbsp;
+        <a href="#" onclick="delFile('${name}');return false;">🗑️ Delete</a>
+      </td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+async function delFile(name){
+  if(!TOKEN) return;
+  if(!confirm("Delete "+name+"?")) return;
+  const res = await fetch(apiBase()+"/delete/"+encodeURIComponent(name)+"?token="+encodeURIComponent(TOKEN), {method:"DELETE"});
+  if(res.ok){ refresh(); } else { alert("Failed to delete ❌"); }
+}
+</script>
+</body>
+</html>
