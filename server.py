@@ -8,26 +8,25 @@ from io import BytesIO
 
 app = FastAPI(title="MyCloudX - MVP")
 
-# Get base directory
+# Base directory setup
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Ensure upload directory exists
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# Ensure static directory exists
 STATIC_DIR = os.path.join(BASE_DIR, "static")
+TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
+
+# Ensure folders exist
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(STATIC_DIR, exist_ok=True)
 
-# Default token
+# Token for auth
 TOKEN = os.getenv("MYCLOUDX_TOKEN", "secret123")
 
-# Mount static files and templates
+# Mount static + template dirs
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/files", StaticFiles(directory=UPLOAD_DIR), name="files")
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+templates = Jinja2Templates(directory=TEMPLATE_DIR)
 
-# CORS middleware
+# CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,39 +35,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Auth check helper
 def require_token(given: str):
     if given != TOKEN:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-# Home route
+# 🏠 Home route
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# Authentication
+# 🔐 Auth route
 @app.post("/auth")
 def auth(token: str = Form(...)):
     require_token(token)
     return {"ok": True}
 
-# Upload file
+# 📤 Upload file
 @app.post("/upload")
 def upload_file(token: str = Form(...), file: UploadFile = File(...)):
     require_token(token)
-    # Sanitize filename
     filename = os.path.basename(file.filename)
     path = os.path.join(UPLOAD_DIR, filename)
     with open(path, "wb") as f:
         shutil.copyfileobj(file.file, f)
     return {"filename": filename}
 
-# List files
+# 📂 List files
 @app.get("/list")
 def list_files(token: str):
     require_token(token)
     return {"files": sorted(os.listdir(UPLOAD_DIR))}
 
-# Download file
+# ⬇️ Download file
 @app.get("/download/{name}")
 def download_file(name: str, token: str):
     require_token(token)
@@ -77,7 +76,7 @@ def download_file(name: str, token: str):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path, filename=name)
 
-# Delete file
+# 🗑️ Delete file
 @app.delete("/delete/{name}")
 def delete_file(name: str, token: str):
     require_token(token)
@@ -87,9 +86,14 @@ def delete_file(name: str, token: str):
     os.remove(path)
     return {"deleted": name}
 
-# QR page
+# 📱 QR Page - Cloudflare / Wi-Fi Dynamic
 @app.get("/qr")
 def get_qr():
+    """
+    Generate QR code for Cloudflare public URL if available,
+    otherwise fall back to local Wi-Fi IP.
+    """
+    # Step 1: get local IP
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(("8.8.8.8", 80))
@@ -99,28 +103,49 @@ def get_qr():
     finally:
         s.close()
 
-    url = f"http://{local_ip}:8000"
+    # Step 2: try reading Cloudflare public URL
+    public_url = os.getenv("MYCLOUDX_PUBLIC_URL", "").strip()
+    if not public_url and os.path.exists("public_url.txt"):
+        with open("public_url.txt", "r") as f:
+            public_url = f.read().strip()
+
+    # Step 3: decide which link to show
+    if public_url:
+        target_url = public_url
+        label = "🌍 Cloudflare Public Access"
+    else:
+        target_url = f"http://{local_ip}:8000"
+        label = "📶 Local Wi-Fi Access"
+
+    # Step 4: create QR code
     qr = qrcode.QRCode(border=2, box_size=8)
-    qr.add_data(url)
+    qr.add_data(target_url)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    img_base64 = base64.b64encode(buf.getvalue()).decode()
 
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    img_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+    # Step 5: HTML for display
     html = f"""
-    <html><body style='display:flex;justify-content:center;align-items:center;height:100vh;background:#0f2027;color:white;font-family:sans-serif;'>
-      <div style='text-align:center;background:rgba(255,255,255,0.1);padding:20px;border-radius:20px;backdrop-filter:blur(8px);'>
-        <h2>📱 Scan to Access MyCloudX</h2>
-        <img src="data:image/png;base64,{img_base64}" style='width:240px;height:240px;margin-top:10px;border-radius:10px;background:white;padding:10px;'>
-        <p>{url}</p>
-      </div>
-    </body></html>
+    <html>
+      <body style='display:flex;justify-content:center;align-items:center;height:100vh;background:#0f2027;color:white;font-family:sans-serif;'>
+        <div style='text-align:center;background:rgba(255,255,255,0.1);padding:25px;border-radius:20px;backdrop-filter:blur(8px);'>
+          <h2>{label}</h2>
+          <img src="data:image/png;base64,{img_base64}" style='width:240px;height:240px;margin-top:10px;border-radius:10px;background:white;padding:10px;'>
+          <p style='margin-top:10px;color:#ccc;'>{target_url}</p>
+        </div>
+      </body>
+    </html>
     """
     return HTMLResponse(html)
 
+# 🚀 Run server
 if __name__ == "__main__":
     import uvicorn
+
+    # Detect local IP for info print
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(("8.8.8.8", 80))
@@ -130,5 +155,14 @@ if __name__ == "__main__":
     finally:
         s.close()
 
-    print(f"\n🌐 MyCloudX is live at:\n➡️  http://127.0.0.1:8000\n➡️  http://{local_ip}:8000 (Wi-Fi access)\n")
+    print("\n🌐 MyCloudX is live at:\n")
+    print(f"➡️  Localhost: http://127.0.0.1:8000")
+    print(f"➡️  Wi-Fi LAN: http://{local_ip}:8000")
+
+    # Print Cloudflare URL if file exists
+    if os.path.exists("public_url.txt"):
+        with open("public_url.txt") as f:
+            link = f.read().strip()
+            print(f"➡️  Cloudflare: {link}\n")
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

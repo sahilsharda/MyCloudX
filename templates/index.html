@@ -2,53 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>MyCloudX — Your Cloud</title>
+  <title>MyCloudX — Your Personal Cloud</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
-    <h1>☁️ MyCloudX</h1>
-    <p class="subtitle">Your futuristic personal cloud</p>
+  <header>
+    <div class="logo">☁️ MyCloudX</div>
+    <div class="actions">
+      <button onclick="showQRModal()" class="icon-btn"><span class="material-icons-round">qr_code</span></button>
+      <button onclick="refresh()" class="icon-btn"><span class="material-icons-round">refresh</span></button>
+      <button onclick="toggleAuth()" class="icon-btn"><span class="material-icons-round">lock</span></button>
+    </div>
+  </header>
 
-    <div class="card">
-      <h3>🔐 Authenticate</h3>
-      <div class="input-row">
-        <input id="token" type="password" placeholder="Enter token (default: secret123)">
-        <button onclick="login()">Login</button>
-      </div>
-      <p id="authStatus" class="muted"></p>
+  <main>
+    <div id="authPanel" class="auth-card">
+      <input id="token" type="password" placeholder="Enter token (default: secret123)">
+      <button onclick="login()">Login</button>
+      <p id="authStatus"></p>
     </div>
 
-    <div class="card">
-      <h3>📤 Upload Files</h3>
-      <div class="input-row">
-        <input id="file" type="file">
-        <button onclick="upload()">Upload</button>
-      </div>
-    </div>
+    <div id="gallery" class="gallery-grid"></div>
+  </main>
 
-    <div class="card">
-      <h3>📁 Your Files</h3>
-      <button onclick="refresh()">🔄 Refresh</button>
-      <table>
-        <thead><tr><th>File</th><th>Actions</th></tr></thead>
-        <tbody id="fileRows"><tr><td class="muted" colspan="2">No files uploaded yet</td></tr></tbody>
-      </table>
-    </div>
-
-    <div class="card" style="text-align:center;">
-      <h3>📱 Connect Device</h3>
-      <p class="muted">Scan the QR to open on your phone</p>
-      <button onclick="showQRModal()">Show QR Code</button>
-    </div>
-  </div>
+  <label class="fab">
+    <input id="file" type="file" onchange="upload()">
+    <span class="material-icons-round">add</span>
+  </label>
 
   <div id="qrModal" onclick="handleModalClick(event)">
     <div id="qrBox">
-      <h2>📱 Scan to Access MyCloudX</h2>
+      <h2>📱 Connect Device</h2>
       <iframe src="/qr" width="270" height="340"></iframe>
-      <br><button style="margin-top:20px;" onclick="hideQRModal()">Close</button>
+      <br><button onclick="hideQRModal()">Close</button>
     </div>
   </div>
 

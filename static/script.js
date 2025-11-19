@@ -1,87 +1,85 @@
 let TOKEN = "";
+
 function apiBase() { return window.location.origin; }
 
 async function login() {
   const t = document.getElementById('token').value.trim();
-  try {
-    const form = new FormData();
-    form.append("token", t);
-    const res = await fetch(apiBase() + "/auth", {
-      method: "POST",
-      body: form
-    });
-    if (!res.ok) throw new Error("Bad token");
+  const form = new FormData();
+  form.append("token", t);
+  const res = await fetch(apiBase() + "/auth", { method: "POST", body: form });
+  if (res.ok) {
     TOKEN = t;
-    document.getElementById('authStatus').textContent = "✅ Authenticated";
+    document.getElementById('authPanel').style.display = 'none';
     refresh();
-  } catch {
-    TOKEN = "";
-    document.getElementById('authStatus').textContent = "❌ Invalid token";
+  } else {
+    alert("Invalid token!");
   }
+}
+
+function toggleAuth() {
+  document.getElementById('authPanel').style.display =
+    document.getElementById('authPanel').style.display === 'none' ? 'flex' : 'none';
 }
 
 async function upload() {
   if (!TOKEN) return alert("Please login first");
-  const f = document.getElementById('file').files[0];
-  if (!f) return alert("Select a file first");
+  const fileInput = document.getElementById('file');
+  const file = fileInput.files[0];
+  if (!file) return;
   const form = new FormData();
+  form.append("file", file);
   form.append("token", TOKEN);
-  form.append("file", f);
   const res = await fetch(apiBase() + "/upload", { method: "POST", body: form });
-  if (res.ok) { alert("Uploaded ✅"); refresh(); } else alert("Upload failed ❌");
+  if (res.ok) refresh();
 }
 
 async function refresh() {
-  if (!TOKEN) return;
   const res = await fetch(apiBase() + "/list?token=" + encodeURIComponent(TOKEN));
-  if (!res.ok) return;
   const data = await res.json();
-  const tbody = document.getElementById('fileRows');
-  tbody.innerHTML = "";
-  if (!data.files.length) {
-    tbody.innerHTML = `<tr><td class="muted" colspan="2">No files uploaded yet</td></tr>`;
-    return;
-  }
-  for (const name of data.files) {
-    const tr = document.createElement('tr');
-    const nameCell = document.createElement('td');
-    nameCell.textContent = `📄 ${name}`;
-    
-    const actionsCell = document.createElement('td');
-    const downloadLink = document.createElement('a');
-    downloadLink.href = `${apiBase()}/download/${encodeURIComponent(name)}?token=${encodeURIComponent(TOKEN)}`;
-    downloadLink.textContent = '⬇️ Download';
-    
-    const deleteLink = document.createElement('a');
-    deleteLink.href = '#';
-    deleteLink.textContent = '🗑️ Delete';
-    deleteLink.onclick = (e) => { e.preventDefault(); delFile(name); return false; };
-    
-    actionsCell.appendChild(downloadLink);
-    actionsCell.appendChild(document.createTextNode(' | '));
-    actionsCell.appendChild(deleteLink);
-    
-    tr.appendChild(nameCell);
-    tr.appendChild(actionsCell);
-    tbody.appendChild(tr);
-  }
+  const grid = document.getElementById('gallery');
+  grid.innerHTML = "";
+  data.files.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'file-card';
+    const thumb = document.createElement('img');
+    thumb.className = 'file-thumb';
+    thumb.src = f.match(/\.(jpg|jpeg|png|gif)$/i)
+      ? apiBase() + "/download/" + f + "?token=" + TOKEN
+      : "https://cdn-icons-png.flaticon.com/512/3767/3767084.png";
+    const name = document.createElement('div');
+    name.className = 'file-name';
+    name.textContent = f;
+
+    const actions = document.createElement('div');
+    actions.className = 'file-actions';
+    const d = document.createElement('button');
+    d.innerHTML = '<span class="material-icons-round" style="font-size:18px;">delete</span>';
+    d.onclick = () => delFile(f);
+    const dl = document.createElement('button');
+    dl.innerHTML = '<span class="material-icons-round" style="font-size:18px;">download</span>';
+    dl.onclick = () => window.open(apiBase() + "/download/" + f + "?token=" + TOKEN);
+
+    actions.appendChild(dl);
+    actions.appendChild(d);
+    card.appendChild(actions);
+    card.appendChild(thumb);
+    card.appendChild(name);
+    grid.appendChild(card);
+  });
 }
 
 async function delFile(name) {
-  if (!TOKEN) return;
   if (!confirm("Delete " + name + "?")) return;
-  const res = await fetch(apiBase() + "/delete/" + encodeURIComponent(name) + "?token=" + encodeURIComponent(TOKEN), { method: "DELETE" });
-  if (res.ok) refresh(); else alert("Delete failed ❌");
+  await fetch(apiBase() + "/delete/" + encodeURIComponent(name) + "?token=" + TOKEN, { method: "DELETE" });
+  refresh();
 }
 
 function showQRModal() {
-  const modal = document.getElementById("qrModal");
-  modal.style.display = "flex";
+  document.getElementById("qrModal").style.display = "flex";
 }
 
 function hideQRModal() {
-  const modal = document.getElementById("qrModal");
-  modal.style.display = "none";
+  document.getElementById("qrModal").style.display = "none";
 }
 
 function handleModalClick(e) {

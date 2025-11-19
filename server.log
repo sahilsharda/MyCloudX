@@ -1,0 +1,13 @@
+INFO:     Started server process [20998]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+ERROR:    [Errno 48] error while attempting to bind on address ('0.0.0.0', 8000): [errno 48] address already in use
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+
+🌐 MyCloudX is live at:
+
+➡️  Localhost: http://127.0.0.1:8000
+➡️  Wi-Fi LAN: http://20.20.17.5:8000
+➡️  Cloudflare: https://reproduction-beyond-fork-critical.trycloudflare.com
+
