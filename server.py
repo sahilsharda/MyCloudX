@@ -5,6 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 import os, shutil, socket, qrcode, base64
 from io import BytesIO
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List
 
 app = FastAPI(title="MyCloudX - MVP")
 
@@ -65,7 +68,35 @@ def upload_file(token: str = Form(...), file: UploadFile = File(...)):
 @app.get("/list")
 def list_files(token: str):
     require_token(token)
-    return {"files": sorted(os.listdir(UPLOAD_DIR))}
+    files_data = []
+    
+    for root, dirs, files in os.walk(UPLOAD_DIR):
+        for file in files:
+            if file.startswith('.'):  # Skip hidden files
+                continue
+            
+            # Get relative path from UPLOAD_DIR
+            filepath = os.path.join(root, file)
+            rel_path = os.path.relpath(filepath, UPLOAD_DIR)
+            
+            try:
+                stat = os.stat(filepath)
+                ext = file.lower().split('.')[-1] if '.' in file else ''
+                
+                files_data.append({
+                    "name": rel_path,
+                    "size": stat.st_size,
+                    "size_formatted": format_bytes(stat.st_size),
+                    "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    "type": get_file_type(ext)
+                })
+            except OSError:
+                continue
+    
+    # Sort by modification date (newest first)
+    files_data.sort(key=lambda x: x["modified"], reverse=True)
+    
+    return {"files": [f["name"] for f in files_data], "files_detailed": files_data}
 
 # ⬇️ Download file
 @app.get("/download/{name}")
@@ -85,6 +116,119 @@ def delete_file(name: str, token: str):
         raise HTTPException(status_code=404, detail="File not found")
     os.remove(path)
     return {"deleted": name}
+
+# 💾 Storage stats
+@app.get("/storage-stats")
+def storage_stats(token: str):
+    require_token(token)
+    
+    total_size = 0
+    file_count = 0
+    type_breakdown = {
+        "images": {"size": 0, "count": 0},
+        "videos": {"size": 0, "count": 0},
+        "documents": {"size": 0, "count": 0},
+        "other": {"size": 0, "count": 0}
+    }
+    
+    # Walk through all files in upload directory
+    for root, dirs, files in os.walk(UPLOAD_DIR):
+        for file in files:
+            if file.startswith('.'):  # Skip hidden files
+                continue
+            filepath = os.path.join(root, file)
+            try:
+                size = os.path.getsize(filepath)
+                total_size += size
+                file_count += 1
+                
+                # Categorize by extension
+                ext = file.lower().split('.')[-1] if '.' in file else ''
+                if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg']:
+                    type_breakdown["images"]["size"] += size
+                    type_breakdown["images"]["count"] += 1
+                elif ext in ['mp4', 'webm', 'ogg', 'avi', 'mov', 'mkv']:
+                    type_breakdown["videos"]["size"] += size
+                    type_breakdown["videos"]["count"] += 1
+                elif ext in ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx']:
+                    type_breakdown["documents"]["size"] += size
+                    type_breakdown["documents"]["count"] += 1
+                else:
+                    type_breakdown["other"]["size"] += size
+                    type_breakdown["other"]["count"] += 1
+            except OSError:
+                continue
+    
+    # Storage quota (10GB default, can be configured via env)
+    quota = int(os.getenv("STORAGE_QUOTA_GB", "10")) * 1024 * 1024 * 1024
+    remaining = max(0, quota - total_size)
+    
+    return {
+        "total_size": total_size,
+        "total_size_formatted": format_bytes(total_size),
+        "file_count": file_count,
+        "quota": quota,
+        "quota_formatted": format_bytes(quota),
+        "remaining": remaining,
+        "remaining_formatted": format_bytes(remaining),
+        "usage_percent": round((total_size / quota * 100), 2) if quota > 0 else 0,
+        "breakdown": type_breakdown
+    }
+
+# 📄 File info
+@app.get("/file-info/{name:path}")
+def file_info(name: str, token: str):
+    require_token(token)
+    path = os.path.join(UPLOAD_DIR, name)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    stat = os.stat(path)
+    ext = name.lower().split('.')[-1] if '.' in name else ''
+    
+    info = {
+        "name": name,
+        "size": stat.st_size,
+        "size_formatted": format_bytes(stat.st_size),
+        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+        "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+        "extension": ext,
+        "type": get_file_type(ext)
+    }
+    
+    # Add image dimensions if it's an image
+    if info["type"] == "image":
+        try:
+            from PIL import Image
+            with Image.open(path) as img:
+                info["width"] = img.width
+                info["height"] = img.height
+        except:
+            pass
+    
+    return info
+
+# Helper functions
+def format_bytes(bytes_size: int) -> str:
+    """Convert bytes to human readable format"""
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if bytes_size < 1024.0:
+            return f"{bytes_size:.2f} {unit}"
+        bytes_size /= 1024.0
+    return f"{bytes_size:.2f} PB"
+
+def get_file_type(ext: str) -> str:
+    """Get file type category from extension"""
+    if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg']:
+        return "image"
+    elif ext in ['mp4', 'webm', 'ogg', 'avi', 'mov', 'mkv']:
+        return "video"
+    elif ext in ['mp3', 'wav', 'ogg', 'flac', 'm4a']:
+        return "audio"
+    elif ext in ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx']:
+        return "document"
+    else:
+        return "other"
 
 # 📱 QR Page - Cloudflare / Wi-Fi Dynamic
 @app.get("/qr")

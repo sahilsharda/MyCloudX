@@ -1,45 +1,203 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>MyCloudX — Your Personal Cloud</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="/static/style.css">
+  <meta charset="utf-8" />
+  <title>MyCloudX — Your Cloud Storage</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Modern cloud storage inspired by Google Photos and iCloud" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=10">
 </head>
 <body>
-  <header>
-    <div class="logo">☁️ MyCloudX</div>
-    <div class="actions">
-      <button onclick="showQRModal()" class="icon-btn"><span class="material-icons-round">qr_code</span></button>
-      <button onclick="refresh()" class="icon-btn"><span class="material-icons-round">refresh</span></button>
-      <button onclick="toggleAuth()" class="icon-btn"><span class="material-icons-round">lock</span></button>
+  <div id="app" class="theme-light">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar">
+      <div class="profile-area">
+        <div id="profilePic" class="profile-pic">M</div>
+        <div class="profile-name" id="profileName">My Cloud</div>
+      </div>
+
+      <!-- Storage Section -->
+      <div class="storage-section">
+        <div class="storage-header">
+          <span class="storage-label">Storage</span>
+          <span class="storage-amount" id="storageAmount">0 B of 10 GB</span>
+        </div>
+        <div class="storage-bar">
+          <div class="storage-fill" id="storageFill" style="width: 0%"></div>
+        </div>
+        <div class="storage-breakdown" id="storageBreakdown">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Folders -->
+      <div class="folder-section">
+        <div class="folders-header">
+          <h4>Folders</h4>
+        </div>
+        <ul id="folderList" class="folder-list">
+          <li data-path="" class="folder-item active">
+            <span class="material-icons-round" style="font-size: 18px;">photo_library</span>
+            All Photos
+          </li>
+        </ul>
+      </div>
+
+      <div class="sidebar-bottom">
+        <button id="openSettings" class="icon-btn settings-btn" title="Settings">
+          <span class="material-icons-round">settings</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main id="main">
+      <div class="topbar">
+        <div class="left-top">
+          <div id="breadcrumb" class="breadcrumb">All Photos</div>
+        </div>
+        <div class="right-top">
+          <input id="search" class="search" placeholder="Search photos and files…" />
+          <button id="sortBtn" class="icon-btn" title="Sort options">
+            <span class="material-icons-round">sort</span>
+          </button>
+          <button id="viewToggle" class="icon-btn" title="Toggle grid/list">
+            <span class="material-icons-round" id="viewIcon">grid_view</span>
+          </button>
+          <button id="toggleTheme" class="icon-btn" title="Light / Dark">
+            <span class="material-icons-round" id="themeIcon">dark_mode</span>
+          </button>
+          <button id="qrOpen" class="icon-btn" title="Connect (QR)">
+            <span class="material-icons-round">qr_code</span>
+          </button>
+        </div>
+      </div>
+
+      <section id="contentArea">
+        <div id="gridView" class="grid-view" aria-live="polite"></div>
+
+        <div id="listView" class="list-view hidden">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Modified</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="listBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="floating-fab">
+        <label class="fab" title="Upload files">
+          <input id="file" type="file" multiple />
+          <span class="material-icons-round">add</span>
+        </label>
+        <button id="newFolderBtn" class="fab small" title="New Folder">
+          <span class="material-icons-round">create_new_folder</span>
+        </button>
+      </div>
+
+      <footer class="footer">
+        <div id="statusText" class="muted">Not signed in</div>
+        <div id="publicLinkArea"></div>
+      </footer>
+    </main>
+
+    <!-- Upload Progress -->
+    <div id="uploadProgress" class="upload-progress hidden">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span id="uploadText" style="font-size: 14px; font-weight: 500;">Uploading...</span>
+        <span id="uploadPercent" style="font-size: 12px; color: var(--text-secondary);">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+      </div>
     </div>
-  </header>
 
-  <main>
-    <div id="authPanel" class="auth-card">
-      <input id="token" type="password" placeholder="Enter token (default: secret123)">
-      <button onclick="login()">Login</button>
-      <p id="authStatus"></p>
+    <!-- QR Modal -->
+    <div id="qrModal" class="modal hidden" onclick="handleModalClick(event)">
+      <div class="modal-card">
+        <h3>Connect Device</h3>
+        <iframe src="/qr" width="280" height="360" style="border-radius:12px; border: none;"></iframe>
+        <div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end;">
+          <button class="btn" onclick="hideQRModal()">Close</button>
+        </div>
+      </div>
     </div>
 
-    <div id="gallery" class="gallery-grid"></div>
-  </main>
-
-  <label class="fab">
-    <input id="file" type="file" onchange="upload()">
-    <span class="material-icons-round">add</span>
-  </label>
-
-  <div id="qrModal" onclick="handleModalClick(event)">
-    <div id="qrBox">
-      <h2>📱 Connect Device</h2>
-      <iframe src="/qr" width="270" height="340"></iframe>
-      <br><button onclick="hideQRModal()">Close</button>
+    <!-- Preview Modal -->
+    <div id="previewModal" class="modal hidden" onclick="handleModalClick(event)">
+      <div class="preview-card">
+        <div class="preview-top">
+          <div id="previewName" class="preview-name"></div>
+          <div class="preview-actions">
+            <button class="icon-btn" onclick="toggleFullscreen()" title="Fullscreen">
+              <span class="material-icons-round">fullscreen</span>
+            </button>
+            <button class="icon-btn" onclick="downloadCurrent()" title="Download">
+              <span class="material-icons-round">download</span>
+            </button>
+            <button class="icon-btn" onclick="closePreview()" title="Close">
+              <span class="material-icons-round">close</span>
+            </button>
+          </div>
+        </div>
+        <div id="previewBody" class="preview-body">
+          <div class="preview-nav">
+            <button onclick="navigatePreview(-1)" title="Previous">
+              <span class="material-icons-round">chevron_left</span>
+            </button>
+            <button onclick="navigatePreview(1)" title="Next">
+              <span class="material-icons-round">chevron_right</span>
+            </button>
+          </div>
+        </div>
+        <div id="previewFooter" class="preview-footer muted"></div>
+      </div>
     </div>
+
+    <!-- Settings Drawer -->
+    <div id="settingsDrawer" class="settings-drawer hidden">
+      <div class="settings-header">
+        <div class="profile-drawer">
+          <div id="profilePicDrawer" class="profile-pic">M</div>
+          <div>
+            <div id="profileNameDrawer" class="profile-name">My Cloud</div>
+            <div class="muted small">mycloudx@local</div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-body">
+        <h4>Settings</h4>
+        <div class="setting-row">
+          <label>Access Token</label>
+          <input id="tokenInput" type="password" placeholder="Enter token (default: secret123)" />
+          <button id="loginBtn" class="btn" style="margin-top: 8px; width: 100%;">Login</button>
+        </div>
+        <div class="setting-row">
+          <label>Theme</label>
+          <select id="themeSelect">
+            <option value="light">Light Mode</option>
+            <option value="dark">Dark Mode</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label>Storage Quota</label>
+          <div class="muted small">Current: <span id="quotaDisplay">10 GB</span></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <script src="/static/script.js"></script>
+  <script src="/static/script.js?v=10"></script>
 </body>
 </html>
