@@ -8,21 +8,43 @@ from io import BytesIO
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
+import json
+import uuid
+from PIL import Image, ImageOps
 
 app = FastAPI(title="MyCloudX - MVP")
 
 # Base directory setup
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+THUMB_DIR = os.path.join(BASE_DIR, "thumbnails")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 
 # Ensure folders exist
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(THUMB_DIR, exist_ok=True)
 os.makedirs(STATIC_DIR, exist_ok=True)
 
 # Token for auth
 TOKEN = os.getenv("MYCLOUDX_TOKEN", "secret123")
+
+# Share links storage
+SHARES_FILE = os.path.join(BASE_DIR, "shares.json")
+if not os.path.exists(SHARES_FILE):
+    with open(SHARES_FILE, "w") as f:
+        json.dump({}, f)
+
+def load_shares():
+    try:
+        with open(SHARES_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_shares(shares):
+    with open(SHARES_FILE, "w") as f:
+        json.dump(shares, f)
 
 # Mount static + template dirs
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -43,6 +65,30 @@ def require_token(given: str):
     if given != TOKEN:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
+def generate_thumbnail(filename):
+    """Generate a thumbnail for an image file"""
+    try:
+        file_path = os.path.join(UPLOAD_DIR, filename)
+        thumb_path = os.path.join(THUMB_DIR, filename)
+        
+        # Skip if thumb exists
+        if os.path.exists(thumb_path):
+            return
+            
+        # Ensure thumb dir structure exists for nested files
+        os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
+        
+        with Image.open(file_path) as img:
+            # Convert to RGB if needed (e.g. PNG with alpha)
+            if img.mode in ('RGBA', 'P'):
+                img = img.convert('RGB')
+                
+            # Create thumbnail
+            img = ImageOps.fit(img, (300, 300), Image.Resampling.LANCZOS)
+            img.save(thumb_path, "JPEG", quality=70)
+    except Exception as e:
+        print(f"Thumbnail generation failed for {filename}: {e}")
+
 # 🏠 Home route
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
@@ -62,6 +108,12 @@ def upload_file(token: str = Form(...), file: UploadFile = File(...)):
     path = os.path.join(UPLOAD_DIR, filename)
     with open(path, "wb") as f:
         shutil.copyfileobj(file.file, f)
+        
+    # Generate thumbnail if image
+    ext = filename.lower().split('.')[-1]
+    if ext in ['jpg', 'jpeg', 'png', 'webp', 'bmp']:
+        generate_thumbnail(filename)
+        
     return {"filename": filename}
 
 # 📂 List files
@@ -96,7 +148,106 @@ def list_files(token: str):
     # Sort by modification date (newest first)
     files_data.sort(key=lambda x: x["modified"], reverse=True)
     
-    return {"files": [f["name"] for f in files_data], "files_detailed": files_data}
+    # Add directories
+    dirs_data = []
+    for root, dirs, files in os.walk(UPLOAD_DIR):
+        for d in dirs:
+            if d.startswith('.'): continue
+            dirpath = os.path.join(root, d)
+            rel_path = os.path.relpath(dirpath, UPLOAD_DIR)
+            dirs_data.append(rel_path)
+            
+    return {
+        "files": [f["name"] for f in files_data], 
+        "files_detailed": files_data,
+        "folders": dirs_data
+    }
+
+# 📁 Folder Operations
+@app.post("/folders/create")
+def create_folder(name: str = Form(...), token: str = Form(...)):
+    require_token(token)
+    # Prevent directory traversal
+    safe_name = os.path.normpath(name).lstrip(os.sep)
+    if '..' in safe_name:
+        raise HTTPException(status_code=400, detail="Invalid folder name")
+        
+    path = os.path.join(UPLOAD_DIR, safe_name)
+    try:
+        os.makedirs(path, exist_ok=True)
+        return {"created": safe_name}
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/folders/delete")
+def delete_folder(name: str, token: str):
+    require_token(token)
+    path = os.path.join(UPLOAD_DIR, name)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Folder not found")
+    try:
+        shutil.rmtree(path)
+        return {"deleted": name}
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ✏️ Rename
+@app.post("/rename")
+def rename_item(old_name: str = Form(...), new_name: str = Form(...), token: str = Form(...)):
+    require_token(token)
+    
+    old_path = os.path.join(UPLOAD_DIR, old_name)
+    new_path = os.path.join(UPLOAD_DIR, new_name)
+    
+    if not os.path.exists(old_path):
+        raise HTTPException(status_code=404, detail="Item not found")
+    if os.path.exists(new_path):
+        raise HTTPException(status_code=400, detail="Destination already exists")
+        
+    # Ensure we stay in upload dir
+    if not os.path.abspath(new_path).startswith(os.path.abspath(UPLOAD_DIR)):
+        raise HTTPException(status_code=400, detail="Invalid destination")
+        
+    try:
+        os.rename(old_path, new_path)
+        return {"renamed": new_name}
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 🔗 Sharing
+@app.post("/share")
+def create_share(path: str = Form(...), token: str = Form(...)):
+    require_token(token)
+    
+    full_path = os.path.join(UPLOAD_DIR, path)
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    shares = load_shares()
+    
+    # Check if already shared
+    for link_id, file_path in shares.items():
+        if file_path == path:
+            return {"link_id": link_id}
+            
+    # Create new share
+    link_id = str(uuid.uuid4())[:8]
+    shares[link_id] = path
+    save_shares(shares)
+    
+    return {"link_id": link_id}
+
+@app.get("/shared/{link_id}")
+def get_shared(link_id: str):
+    shares = load_shares()
+    if link_id not in shares:
+        raise HTTPException(status_code=404, detail="Link not found or expired")
+        
+    path = os.path.join(UPLOAD_DIR, shares[link_id])
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    return FileResponse(path, filename=os.path.basename(path))
 
 # ⬇️ Download file
 @app.get("/download/{name}")
@@ -106,6 +257,25 @@ def download_file(name: str, token: str):
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path, filename=name)
+
+# 🖼️ Get Thumbnail
+@app.get("/thumbnail/{name:path}")
+def get_thumbnail(name: str, token: str):
+    require_token(token)
+    path = os.path.join(THUMB_DIR, name)
+    
+    # If thumbnail doesn't exist, try to generate it
+    if not os.path.exists(path):
+        orig_path = os.path.join(UPLOAD_DIR, name)
+        if os.path.exists(orig_path):
+            generate_thumbnail(name)
+    
+    if os.path.exists(path):
+        return FileResponse(path)
+    else:
+        # Fallback to original if generation failed or not possible
+        # Or return 404 to let frontend show icon
+        raise HTTPException(status_code=404, detail="Thumbnail not found")
 
 # 🗑️ Delete file
 @app.delete("/delete/{name}")

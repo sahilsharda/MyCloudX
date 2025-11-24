@@ -5,6 +5,7 @@ let TOKEN = "";
 let CURRENT_FOLDER = "";
 let VIEW = "grid"; // grid or list
 let FILES = [];
+let FOLDERS = [];
 let FILES_DETAILED = [];
 let CURRENT_PREVIEW = null;
 let CURRENT_PREVIEW_INDEX = -1;
@@ -21,7 +22,14 @@ document.addEventListener('DOMContentLoaded', () => {
   setThemeFromStorage();
   loadProfileName();
   setupDragDrop();
-  refreshUI();
+
+  // Auto-login check
+  const savedToken = localStorage.getItem('mycloud_token');
+  if (savedToken) {
+    validateAndLogin(savedToken);
+  } else {
+    refreshUI(); // Will show "Not signed in"
+  }
 });
 
 function bindUI() {
@@ -64,14 +72,12 @@ function toggleTheme() {
     app.classList.remove('theme-light');
     app.classList.add('theme-dark');
     localStorage.setItem('mycloud_theme', 'dark');
-    el('themeIcon').textContent = 'light_mode';
-    el('themeSelect').value = 'dark';
+    if (el('themeSelect')) el('themeSelect').value = 'dark';
   } else {
     app.classList.remove('theme-dark');
     app.classList.add('theme-light');
     localStorage.setItem('mycloud_theme', 'light');
-    el('themeIcon').textContent = 'dark_mode';
-    el('themeSelect').value = 'light';
+    if (el('themeSelect')) el('themeSelect').value = 'light';
   }
 }
 
@@ -81,13 +87,11 @@ function setThemeFromStorage() {
   if (t === 'dark') {
     app.classList.remove('theme-light');
     app.classList.add('theme-dark');
-    el('themeIcon').textContent = 'light_mode';
-    el('themeSelect').value = 'dark';
+    if (el('themeSelect')) el('themeSelect').value = 'dark';
   } else {
     app.classList.remove('theme-dark');
     app.classList.add('theme-light');
-    el('themeIcon').textContent = 'dark_mode';
-    el('themeSelect').value = 'light';
+    if (el('themeSelect')) el('themeSelect').value = 'light';
   }
 }
 
@@ -97,12 +101,10 @@ function handleThemeSelect(e) {
     app.classList.remove('theme-light');
     app.classList.add('theme-dark');
     localStorage.setItem('mycloud_theme', 'dark');
-    el('themeIcon').textContent = 'light_mode';
   } else {
     app.classList.remove('theme-dark');
     app.classList.add('theme-light');
     localStorage.setItem('mycloud_theme', 'light');
-    el('themeIcon').textContent = 'dark_mode';
   }
 }
 
@@ -120,19 +122,45 @@ async function doLogin() {
   refreshUI();
 }
 
+async function validateAndLogin(token) {
+  el('statusText').textContent = 'Verifying...';
+  const form = new FormData();
+  form.append('token', token);
+
+  try {
+    const res = await fetch(apiBase() + "/auth", { method: 'POST', body: form });
+    if (res.ok) {
+      TOKEN = token;
+      el('statusText').textContent = 'Authenticated ✓';
+      el('tokenInput').value = token;
+      refreshUI();
+    } else {
+      console.log('Saved token invalid');
+      localStorage.removeItem('mycloud_token');
+      el('statusText').textContent = 'Not signed in';
+    }
+  } catch (e) {
+    console.error('Auth check failed', e);
+    el('statusText').textContent = 'Offline';
+  }
+}
+
 async function promptLogin() {
   const t = prompt('Enter access token (default: secret123):', 'secret123');
   if (!t) return;
-  TOKEN = t;
+
   const form = new FormData();
-  form.append('token', TOKEN);
+  form.append('token', t);
   const res = await fetch(apiBase() + "/auth", { method: 'POST', body: form });
+
   if (!res.ok) {
-    TOKEN = "";
     alert('Authentication failed');
   } else {
+    TOKEN = t;
     el('statusText').textContent = 'Authenticated ✓';
     localStorage.setItem('mycloud_token', TOKEN);
+    el('tokenInput').value = TOKEN;
+    refreshUI();
   }
 }
 
@@ -194,12 +222,17 @@ async function refreshUI() {
   try {
     // Fetch file list
     const res = await fetch(apiBase() + "/list?token=" + encodeURIComponent(TOKEN));
+    if (res.status === 401) {
+      handleAuthError();
+      return;
+    }
     if (!res.ok) throw new Error('List failed');
     const data = await res.json();
     FILES = data.files || [];
     FILES_DETAILED = data.files_detailed || [];
+    FOLDERS = data.folders || [];
 
-    buildFolderList(FILES);
+    buildFolderList(FOLDERS);
     renderFiles();
 
     el('statusText').textContent = `${FILES.length} items`;
@@ -213,6 +246,14 @@ async function refreshUI() {
     console.error(e);
     el('statusText').textContent = 'Load error';
   }
+}
+
+function handleAuthError() {
+  TOKEN = "";
+  localStorage.removeItem('mycloud_token');
+  el('statusText').textContent = 'Session expired';
+  alert('Session expired. Please login again.');
+  toggleSettings();
 }
 
 async function fetchStorageStats() {
@@ -285,20 +326,7 @@ function updateStorageUI() {
 }
 
 // ========== FOLDER MANAGEMENT ==========
-function buildFolderList(files) {
-  const set = new Set();
-  files.forEach(f => {
-    if (f.includes('/')) {
-      const parts = f.split('/');
-      let path = '';
-      for (let i = 0; i < parts.length - 1; i++) {
-        path += (i ? '/' : '') + parts[i];
-        set.add(path);
-      }
-    }
-  });
-
-  const arr = Array.from(set).sort();
+function buildFolderList(folders) {
   const ul = el('folderList');
   ul.innerHTML = `
     <li data-path="" class="folder-item ${CURRENT_FOLDER === "" ? 'active' : ''}" onclick="selectFolder('')">
@@ -307,7 +335,7 @@ function buildFolderList(files) {
     </li>
   `;
 
-  arr.forEach(p => {
+  folders.sort().forEach(p => {
     const li = document.createElement('li');
     li.className = 'folder-item' + (p === CURRENT_FOLDER ? ' active' : '');
     li.dataset.path = p;
@@ -333,23 +361,24 @@ function updateActiveFolder() {
   renderFiles();
 }
 
-function createFolderPrompt() {
+async function createFolderPrompt() {
   const name = prompt('Create folder (no slashes):', 'New Folder');
   if (!name || name.includes('/')) return alert('Invalid folder name');
 
-  // Add to folder list
-  const ul = el('folderList');
-  const li = document.createElement('li');
-  li.className = 'folder-item';
-  li.dataset.path = name;
-  li.innerHTML = `
-    <span class="material-icons-round" style="font-size: 18px;">folder</span>
-    ${name}
-  `;
-  li.onclick = () => selectFolder(name);
-  ul.appendChild(li);
+  const fullPath = CURRENT_FOLDER ? (CURRENT_FOLDER + '/' + name) : name;
+  const form = new FormData();
+  form.append('name', fullPath);
+  form.append('token', TOKEN);
 
-  alert('Folder created! Upload files to this folder to populate it.');
+  try {
+    const res = await fetch(apiBase() + "/folders/create", { method: 'POST', body: form });
+    if (!res.ok) throw new Error('Create failed');
+    await refreshUI();
+    alert('Folder created!');
+  } catch (e) {
+    console.error(e);
+    alert('Failed to create folder');
+  }
 }
 
 // ========== FILE RENDERING ==========
@@ -394,6 +423,12 @@ function renderFiles() {
           <button class="icon-btn" onclick="downloadFile('${encodeURIComponent(f.name)}')">
             <span class="material-icons-round">download</span>
           </button>
+          <button class="icon-btn" onclick="renameFile('${encodeURIComponent(f.name)}')">
+            <span class="material-icons-round">edit</span>
+          </button>
+          <button class="icon-btn" onclick="shareFile('${encodeURIComponent(f.name)}')">
+            <span class="material-icons-round">share</span>
+          </button>
           <button class="icon-btn" onclick="delFile('${encodeURIComponent(f.name)}')">
             <span class="material-icons-round">delete</span>
           </button>
@@ -410,11 +445,18 @@ function makeCard(fileData) {
 
   const img = document.createElement('img');
   img.className = 'file-thumb';
-  const url = apiBase() + "/download/" + encodeURIComponent(fileData.name) + "?token=" + encodeURIComponent(TOKEN);
+  img.loading = "lazy"; // Lazy load
+
+  const fullUrl = apiBase() + "/download/" + encodeURIComponent(fileData.name) + "?token=" + encodeURIComponent(TOKEN);
+  const thumbUrl = apiBase() + "/thumbnail/" + encodeURIComponent(fileData.name) + "?token=" + encodeURIComponent(TOKEN);
 
   if (fileData.type === 'image') {
-    img.src = url;
+    img.src = thumbUrl;
     img.alt = fileData.name;
+    // Fallback to full image if thumb fails
+    img.onerror = () => {
+      if (img.src !== fullUrl) img.src = fullUrl;
+    };
   } else if (fileData.type === 'video') {
     img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect fill="%23000" width="200" height="200"/><text x="50%" y="50%" fill="%23fff" font-size="60" text-anchor="middle" dy=".3em">▶</text></svg>';
     img.alt = 'video';
@@ -460,6 +502,25 @@ function makeCard(fileData) {
   };
 
   actions.appendChild(dl);
+
+  const ren = document.createElement('button');
+  ren.className = 'icon-btn';
+  ren.innerHTML = '<span class="material-icons-round">edit</span>';
+  ren.onclick = (e) => {
+    e.stopPropagation();
+    renameFile(encodeURIComponent(fileData.name));
+  };
+  actions.appendChild(ren);
+
+  const share = document.createElement('button');
+  share.className = 'icon-btn';
+  share.innerHTML = '<span class="material-icons-round">share</span>';
+  share.onclick = (e) => {
+    e.stopPropagation();
+    shareFile(encodeURIComponent(fileData.name));
+  };
+  actions.appendChild(share);
+
   actions.appendChild(rm);
 
   meta.appendChild(name);
@@ -723,6 +784,55 @@ async function delFile(encoded) {
   }
 }
 
+async function renameFile(encoded) {
+  const oldName = decodeURIComponent(encoded);
+  const newName = prompt('Rename to:', oldName.split('/').pop());
+  if (!newName || newName === oldName.split('/').pop()) return;
+
+  // Construct full new path
+  const parts = oldName.split('/');
+  parts.pop();
+  const fullNewName = parts.length ? (parts.join('/') + '/' + newName) : newName;
+
+  const form = new FormData();
+  form.append('old_name', oldName);
+  form.append('new_name', fullNewName);
+  form.append('token', TOKEN);
+
+  try {
+    const res = await fetch(apiBase() + "/rename", { method: 'POST', body: form });
+    if (!res.ok) throw new Error('Rename failed');
+    await refreshUI();
+  } catch (e) {
+    console.error(e);
+    alert('Rename failed');
+  }
+}
+
+async function shareFile(encoded) {
+  const name = decodeURIComponent(encoded);
+  const form = new FormData();
+  form.append('path', name);
+  form.append('token', TOKEN);
+
+  try {
+    const res = await fetch(apiBase() + "/share", { method: 'POST', body: form });
+    if (!res.ok) throw new Error('Share failed');
+    const data = await res.json();
+    const link = apiBase() + "/shared/" + data.link_id;
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(link).then(() => {
+      alert('Link copied to clipboard!\n' + link);
+    }).catch(() => {
+      prompt('Share link:', link);
+    });
+  } catch (e) {
+    console.error(e);
+    alert('Share failed');
+  }
+}
+
 // ========== VIEW TOGGLE ==========
 function toggleView() {
   VIEW = VIEW === 'grid' ? 'list' : 'grid';
@@ -741,7 +851,13 @@ function hideQRModal() {
 }
 
 function toggleSettings() {
-  el('settingsDrawer').classList.toggle('hidden');
+  console.log('Toggling settings');
+  const drawer = el('settingsDrawer');
+  if (drawer) {
+    drawer.classList.toggle('hidden');
+  } else {
+    console.error('Settings drawer not found');
+  }
 }
 
 function handleModalClick(e) {
