@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <title>MyCloudX — Your Cloud Storage</title>
@@ -9,6 +10,7 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css?v=10">
 </head>
+
 <body>
   <div id="app" class="theme-light">
 
@@ -67,12 +69,6 @@
           <button id="viewToggle" class="icon-btn" title="Toggle grid/list">
             <span class="material-icons-round" id="viewIcon">grid_view</span>
           </button>
-          <button id="toggleTheme" class="icon-btn" title="Light / Dark">
-            <span class="material-icons-round" id="themeIcon">dark_mode</span>
-          </button>
-          <button id="qrOpen" class="icon-btn" title="Connect (QR)">
-            <span class="material-icons-round">qr_code</span>
-          </button>
         </div>
       </div>
 
@@ -106,8 +102,17 @@
       </div>
 
       <footer class="footer">
-        <div id="statusText" class="muted">Not signed in</div>
-        <div id="publicLinkArea"></div>
+        <div class="footer-left">
+          <span id="statusText" class="muted">Not signed in</span>
+          <span class="footer-separator">•</span>
+          <span class="footer-version">MyCloudX v1.0</span>
+        </div>
+        <div class="footer-right">
+          <div id="publicLinkArea"></div>
+          <a href="https://github.com/sahilsharda/MyCloudX" target="_blank" class="footer-link" title="View on GitHub">
+            <span class="material-icons-round" style="font-size: 16px;">code</span>
+          </a>
+        </div>
       </footer>
     </main>
 
@@ -176,12 +181,24 @@
         </div>
       </div>
       <div class="settings-body">
-        <h4>Settings</h4>
+        <h4>Profile</h4>
+        <div class="setting-row">
+          <label>Display Name</label>
+          <input id="profileNameInput" type="text" placeholder="Enter your name" />
+          <button id="saveProfileBtn" class="btn" style="margin-top: 8px; width: 100%;">Save Name</button>
+        </div>
+
+        <h4 style="margin-top: 20px;">Authentication</h4>
         <div class="setting-row">
           <label>Access Token</label>
           <input id="tokenInput" type="password" placeholder="Enter token (default: secret123)" />
           <button id="loginBtn" class="btn" style="margin-top: 8px; width: 100%;">Login</button>
         </div>
+        <div class="setting-row">
+          <button id="logoutBtn" class="btn btn-secondary" style="width: 100%;">Logout</button>
+        </div>
+
+        <h4 style="margin-top: 20px;">Appearance</h4>
         <div class="setting-row">
           <label>Theme</label>
           <select id="themeSelect">
@@ -189,9 +206,27 @@
             <option value="dark">Dark Mode</option>
           </select>
         </div>
+
+        <h4 style="margin-top: 20px;">Storage</h4>
         <div class="setting-row">
           <label>Storage Quota</label>
           <div class="muted small">Current: <span id="quotaDisplay">10 GB</span></div>
+        </div>
+        <div class="setting-row">
+          <div id="storageWarning" class="storage-warning hidden">
+            <span class="material-icons-round" style="font-size: 16px;">warning</span>
+            <span>Storage is running low!</span>
+          </div>
+        </div>
+
+        <h4 style="margin-top: 20px;">Connection</h4>
+        <div class="setting-row">
+          <label>Device Connection</label>
+          <button id="qrOpenSettings" class="btn btn-secondary" style="width: 100%;">
+            <span class="material-icons-round"
+              style="font-size: 18px; vertical-align: middle; margin-right: 8px;">qr_code</span>
+            Show QR Code
+          </button>
         </div>
       </div>
     </div>
@@ -200,4 +235,5 @@
 
   <script src="/static/script.js?v=10"></script>
 </body>
+
 </html>

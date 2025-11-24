@@ -19,6 +19,7 @@ const apiBase = () => window.location.origin;
 document.addEventListener('DOMContentLoaded', () => {
   bindUI();
   setThemeFromStorage();
+  loadProfileName();
   setupDragDrop();
   refreshUI();
 });
@@ -26,10 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
 function bindUI() {
   el('viewToggle').addEventListener('click', toggleView);
   el('file').addEventListener('change', upload);
-  el('qrOpen').addEventListener('click', showQRModal);
-  el('toggleTheme').addEventListener('click', toggleTheme);
+  el('qrOpenSettings')?.addEventListener('click', showQRModal);
   el('openSettings').addEventListener('click', toggleSettings);
   el('loginBtn')?.addEventListener('click', doLogin);
+  el('logoutBtn')?.addEventListener('click', doLogout);
+  el('saveProfileBtn')?.addEventListener('click', saveProfileName);
   el('newFolderBtn').addEventListener('click', createFolderPrompt);
   el('search').addEventListener('input', renderFiles);
   el('themeSelect')?.addEventListener('change', handleThemeSelect);
@@ -130,7 +132,53 @@ async function promptLogin() {
     alert('Authentication failed');
   } else {
     el('statusText').textContent = 'Authenticated ✓';
+    localStorage.setItem('mycloud_token', TOKEN);
   }
+}
+
+function doLogout() {
+  TOKEN = "";
+  localStorage.removeItem('mycloud_token');
+  el('statusText').textContent = 'Not signed in';
+  el('tokenInput').value = '';
+  FILES = [];
+  FILES_DETAILED = [];
+  el('gridView').innerHTML = '';
+  el('listBody').innerHTML = '';
+  toggleSettings();
+  alert('Logged out successfully');
+}
+
+// ========== PROFILE MANAGEMENT ==========
+function loadProfileName() {
+  const savedName = localStorage.getItem('mycloud_profile_name') || 'My Cloud';
+  el('profileName').textContent = savedName;
+  el('profileNameDrawer').textContent = savedName;
+  el('profileNameInput').value = savedName;
+
+  // Set profile pic initial
+  const initial = savedName.charAt(0).toUpperCase();
+  el('profilePic').textContent = initial;
+  el('profilePicDrawer').textContent = initial;
+}
+
+function saveProfileName() {
+  const name = el('profileNameInput').value.trim();
+  if (!name) {
+    alert('Please enter a name');
+    return;
+  }
+
+  localStorage.setItem('mycloud_profile_name', name);
+  el('profileName').textContent = name;
+  el('profileNameDrawer').textContent = name;
+
+  // Update profile pic initial
+  const initial = name.charAt(0).toUpperCase();
+  el('profilePic').textContent = initial;
+  el('profilePicDrawer').textContent = initial;
+
+  alert('Profile name saved!');
 }
 
 // ========== DATA FETCHING ==========
@@ -186,8 +234,30 @@ function updateStorageUI() {
   // Update storage amount
   el('storageAmount').textContent = `${total_size_formatted} of ${quota_formatted}`;
 
-  // Update storage bar
-  el('storageFill').style.width = `${Math.min(usage_percent, 100)}%`;
+  // Update storage bar with color coding
+  const fillEl = el('storageFill');
+  fillEl.style.width = `${Math.min(usage_percent, 100)}%`;
+
+  // Color code based on usage
+  fillEl.classList.remove('warning', 'danger');
+  if (usage_percent >= 90) {
+    fillEl.classList.add('danger');
+  } else if (usage_percent >= 70) {
+    fillEl.classList.add('warning');
+  }
+
+  // Show/hide storage warning
+  const warningEl = el('storageWarning');
+  if (usage_percent >= 85) {
+    warningEl.classList.remove('hidden');
+    if (usage_percent >= 95) {
+      warningEl.querySelector('span:last-child').textContent = 'Storage almost full!';
+    } else {
+      warningEl.querySelector('span:last-child').textContent = 'Storage is running low!';
+    }
+  } else {
+    warningEl.classList.add('hidden');
+  }
 
   // Update breakdown
   const breakdownEl = el('storageBreakdown');
