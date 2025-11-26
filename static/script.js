@@ -44,8 +44,25 @@ function bindUI() {
   el('search').addEventListener('input', renderFiles);
   el('themeSelect')?.addEventListener('change', handleThemeSelect);
 
+  // Mobile Menu
+  el('menuBtn')?.addEventListener('click', toggleSidebar);
+  el('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+
   // Keyboard shortcuts
   document.addEventListener('keydown', handleKeyboard);
+}
+
+function toggleSidebar() {
+  const sidebar = el('sidebar');
+  const overlay = el('sidebarOverlay');
+
+  if (sidebar.classList.contains('open')) {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('visible');
+  } else {
+    sidebar.classList.add('open');
+    overlay.classList.add('visible');
+  }
 }
 
 function handleKeyboard(e) {
@@ -117,8 +134,9 @@ async function doLogin() {
   const res = await fetch(apiBase() + "/auth", { method: 'POST', body: form });
   if (!res.ok) return alert('Invalid token');
   TOKEN = token;
+  localStorage.setItem('mycloud_token', TOKEN);
   el('statusText').textContent = 'Authenticated ✓';
-  toggleSettings();
+  el('tokenInput').value = TOKEN;
   refreshUI();
 }
 
@@ -213,8 +231,7 @@ function saveProfileName() {
 async function refreshUI() {
   if (!TOKEN) {
     el('statusText').textContent = 'Not signed in';
-    await promptLogin();
-    if (!TOKEN) return;
+    return; // Auto-login will handle this
   }
 
   el('statusText').textContent = 'Loading…';
@@ -351,6 +368,14 @@ function buildFolderList(folders) {
 function selectFolder(path) {
   CURRENT_FOLDER = path;
   updateActiveFolder();
+
+  // Close sidebar on mobile if open
+  if (window.innerWidth <= 768) {
+    const sidebar = el('sidebar');
+    if (sidebar.classList.contains('open')) {
+      toggleSidebar();
+    }
+  }
 }
 
 function updateActiveFolder() {

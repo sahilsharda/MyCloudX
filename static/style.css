@@ -700,6 +700,7 @@ main {
   left: 24px;
   bottom: 24px;
   width: 360px;
+  max-height: calc(100vh - 100px);
   background: var(--overlay);
   backdrop-filter: blur(40px);
   border-radius: var(--radius-xl);
@@ -708,6 +709,8 @@ main {
   border: 1px solid var(--border);
   z-index: 900;
   animation: slideUp var(--transition-normal);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 @keyframes slideUp {
@@ -786,16 +789,97 @@ main {
   box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
 }
 
-.btn {
-  padding: 10px 20px;
-  border-radius: var(--radius-md);
-  background: var(--accent);
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+
+
+/* ========== MOBILE RESPONSIVENESS ========== */
+.mobile-only {
+  display: none !important;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 800;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-normal);
+}
+
+.sidebar-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: flex !important;
+  }
+
+  #sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 850;
+    transform: translateX(-100%);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
+  }
+
+  #sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Adjust main content to take full width since sidebar is hidden */
+  main {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  /* Adjust grid for mobile */
+  .grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    padding: 16px;
+  }
+
+  /* Adjust topbar */
+  .topbar {
+    padding: 12px 16px;
+  }
+
+  .breadcrumb {
+    font-size: 18px;
+  }
+
+  .search {
+    display: none;
+    /* Hide search on mobile for simplicity, or make it a toggle */
+  }
+
+  /* Adjust floating button */
+  .floating-fab {
+    right: 24px;
+    bottom: 24px;
+  }
+
+  /* Adjust file card */
+  .file-thumb {
+    height: 140px;
+  }
+
+  /* Settings drawer on mobile */
+  .settings-drawer {
+    width: 100%;
+    left: 0;
+    bottom: 0;
+    border-radius: 24px 24px 0 0;
+    max-height: 85vh;
+  }
+}
+
+transition: all var(--transition-fast);
 }
 
 .btn:hover {
@@ -918,69 +1002,7 @@ main {
 }
 
 /* ========== RESPONSIVE ========== */
-@media (max-width: 900px) {
-  #sidebar {
-    display: none;
-  }
 
-  .search {
-    width: 180px;
-  }
-
-  .grid-view {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
-  }
-
-  .file-thumb {
-    height: 150px;
-  }
-
-  .preview-card {
-    width: 95vw;
-    padding: 16px;
-  }
-
-  .settings-drawer {
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 360px;
-  }
-
-  .floating-fab {
-    right: 16px;
-    bottom: 16px;
-  }
-}
-
-@media (max-width: 600px) {
-  .topbar {
-    padding: 12px 16px;
-  }
-
-  #contentArea {
-    padding: 16px;
-  }
-
-  .grid-view {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 8px;
-  }
-
-  .file-thumb {
-    height: 120px;
-  }
-
-  .breadcrumb {
-    font-size: 16px;
-  }
-
-  .search {
-    width: 120px;
-    font-size: 13px;
-  }
-}
 
 /* ========== DRAG & DROP ========== */
 .drag-over {
@@ -1022,4 +1044,92 @@ main {
   height: 100%;
   background: var(--accent);
   transition: width var(--transition-fast);
+}
+
+/* ========== MOBILE RESPONSIVENESS ========== */
+.mobile-only {
+  display: none !important;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 800;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-normal);
+}
+
+.sidebar-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: flex !important;
+  }
+
+  #sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 850;
+    transform: translateX(-100%);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
+  }
+
+  #sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Adjust main content to take full width since sidebar is hidden */
+  main {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  /* Adjust grid for mobile */
+  .grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    padding: 16px;
+  }
+
+  /* Adjust topbar */
+  .topbar {
+    padding: 12px 16px;
+  }
+
+  .breadcrumb {
+    font-size: 18px;
+  }
+
+  .search {
+    display: none;
+    /* Hide search on mobile for simplicity, or make it a toggle */
+  }
+
+  /* Adjust floating button */
+  .floating-fab {
+    right: 24px;
+    bottom: 24px;
+  }
+
+  /* Adjust file card */
+  .file-thumb {
+    height: 140px;
+  }
+
+  /* Settings drawer on mobile */
+  .settings-drawer {
+    width: 100%;
+    left: 0;
+    bottom: 0;
+    border-radius: 24px 24px 0 0;
+    max-height: 85vh;
+  }
 }

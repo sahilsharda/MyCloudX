@@ -13,6 +13,7 @@
 
 <body>
   <div id="app" class="theme-light">
+    <div id="sidebarOverlay" class="sidebar-overlay hidden"></div>
 
     <!-- SIDEBAR -->
     <aside id="sidebar">
@@ -59,6 +60,9 @@
     <main id="main">
       <div class="topbar">
         <div class="left-top">
+          <button id="menuBtn" class="icon-btn mobile-only" title="Menu">
+            <span class="material-icons-round">menu</span>
+          </button>
           <div id="breadcrumb" class="breadcrumb">All Photos</div>
         </div>
         <div class="right-top">
@@ -179,6 +183,9 @@
             <div class="muted small">mycloudx@local</div>
           </div>
         </div>
+        <button class="icon-btn" onclick="toggleSettings()" title="Close" style="margin-left: auto;">
+          <span class="material-icons-round">close</span>
+        </button>
       </div>
       <div class="settings-body">
         <h4>Profile</h4>
