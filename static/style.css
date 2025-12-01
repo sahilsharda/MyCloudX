@@ -879,7 +879,8 @@ main {
   }
 }
 
-transition: all var(--transition-fast);
+.btn {
+  transition: all var(--transition-fast);
 }
 
 .btn:hover {
