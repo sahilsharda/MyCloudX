@@ -26,7 +26,14 @@
   --shadow-dark: rgba(0, 0, 0, 0.5);
   --overlay-dark: rgba(18, 18, 18, 0.95);
 
-  /* Shared */
+  /* Vibrant Accent & Glass Settings */
+  --accent-vibrant: #6366f1;
+  /* Indigo-ish */
+  --accent-glow: rgba(99, 102, 241, 0.4);
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -583,6 +590,97 @@ main {
   display: none;
 }
 
+#authModal {
+  background: url('/static/assets/login_bg.png') no-repeat center center/cover;
+}
+
+.auth-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  color: white;
+  padding: 40px;
+  text-align: center;
+  animation: modalSlideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.auth-card h2 {
+  font-size: 28px;
+  margin-bottom: 8px;
+  color: white;
+}
+
+.auth-card .muted {
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 32px;
+}
+
+.auth-card .input-group label {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  text-align: left;
+}
+
+.auth-card input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  height: 48px;
+  border-radius: var(--radius-md);
+  padding: 0 16px;
+  transition: all 0.3s ease;
+}
+
+.auth-card input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.auth-card input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-vibrant);
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.auth-card .btn.primary {
+  background: var(--accent-vibrant);
+  height: 48px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 12px var(--accent-glow);
+  transition: all 0.3s ease;
+}
+
+.auth-card .btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+.auth-card .auth-footer {
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 24px;
+}
+
+.auth-card .auth-footer a {
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .modal-card {
   background: var(--card);
   border-radius: var(--radius-xl);
@@ -789,108 +887,77 @@ main {
   box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
 }
 
-
-
-/* ========== MOBILE RESPONSIVENESS ========== */
-.mobile-only {
-  display: none !important;
+/* ========== AUTH MODAL ========== */
+.auth-card {
+  max-width: 400px;
+  text-align: center;
 }
 
-.sidebar-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  z-index: 800;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--transition-normal);
+.auth-card h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
 }
 
-.sidebar-overlay.visible {
-  opacity: 1;
-  pointer-events: auto;
+.auth-card p {
+  margin-bottom: 24px;
 }
 
-@media (max-width: 768px) {
-  .mobile-only {
-    display: flex !important;
-  }
-
-  #sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    z-index: 850;
-    transform: translateX(-100%);
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
-  }
-
-  #sidebar.open {
-    transform: translateX(0);
-  }
-
-  /* Adjust main content to take full width since sidebar is hidden */
-  main {
-    width: 100%;
-    margin-left: 0;
-  }
-
-  /* Adjust grid for mobile */
-  .grid-view {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 12px;
-    padding: 16px;
-  }
-
-  /* Adjust topbar */
-  .topbar {
-    padding: 12px 16px;
-  }
-
-  .breadcrumb {
-    font-size: 18px;
-  }
-
-  .search {
-    display: none;
-    /* Hide search on mobile for simplicity, or make it a toggle */
-  }
-
-  /* Adjust floating button */
-  .floating-fab {
-    right: 24px;
-    bottom: 24px;
-  }
-
-  /* Adjust file card */
-  .file-thumb {
-    height: 140px;
-  }
-
-  /* Settings drawer on mobile */
-  .settings-drawer {
-    width: 100%;
-    left: 0;
-    bottom: 0;
-    border-radius: 24px 24px 0 0;
-    max-height: 85vh;
-  }
+.input-group {
+  text-align: left;
+  margin-bottom: 16px;
 }
 
-.btn {
+.input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-primary);
+  font-size: 16px;
   transition: all var(--transition-fast);
 }
 
-.btn:hover {
+.input-group input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.btn {
+  padding: 12px 24px;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 14px;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: white;
+}
+
+.btn.primary:hover {
   background: var(--accent-hover);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
 }
 
-.btn:active {
-  transform: translateY(0);
+.btn.full-width {
+  width: 100%;
 }
 
 .btn-secondary {
@@ -900,151 +967,33 @@ main {
 }
 
 .btn-secondary:hover {
-  background: var(--card);
-  border-color: var(--accent);
+  background: var(--border);
+}
+
+.auth-footer {
+  margin-top: 24px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.auth-footer a {
   color: var(--accent);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Storage Warning */
-.storage-warning {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  background: rgba(255, 152, 0, 0.1);
-  border: 1px solid rgba(255, 152, 0, 0.3);
-  border-radius: var(--radius-md);
-  color: #ff9800;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.theme-dark .storage-warning {
-  background: rgba(255, 152, 0, 0.15);
-  border-color: rgba(255, 152, 0, 0.4);
-}
-
-/* ========== FOOTER ========== */
-.footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 24px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  font-size: 13px;
-  color: var(--text-secondary);
-  gap: 16px;
-}
-
-.footer-left,
-.footer-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.footer-separator {
-  color: var(--border);
-}
-
-.footer-version {
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.footer-link {
-  color: var(--text-secondary);
   text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all var(--transition-fast);
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
+  font-weight: 600;
 }
 
-.footer-link:hover {
-  color: var(--accent);
-  background: var(--surface);
+.auth-footer a:hover {
+  text-decoration: underline;
 }
 
-.muted {
-  color: var(--text-secondary);
-}
-
-.small {
-  font-size: 12px;
-}
-
-/* ========== UTILITIES ========== */
+/* Helpers */
 .hidden {
   display: none !important;
 }
 
-/* ========== SCROLLBAR ========== */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-}
-
-/* ========== RESPONSIVE ========== */
-
-
-/* ========== DRAG & DROP ========== */
-.drag-over {
-  border: 2px dashed var(--accent);
-  background: rgba(26, 115, 232, 0.05);
-}
-
-.theme-dark .drag-over {
-  background: rgba(138, 180, 248, 0.1);
-}
-
-.upload-progress {
-  position: fixed;
-  bottom: 100px;
-  right: 32px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  min-width: 300px;
-  box-shadow: 0 8px 24px var(--shadow);
-  z-index: 999;
-}
-
-.upload-progress.hidden {
-  display: none;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 4px;
-  background: var(--surface);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 8px;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--accent);
-  transition: width var(--transition-fast);
+.muted {
+  color: var(--text-secondary);
+  font-size: 0.9em;
 }
 
 /* ========== MOBILE RESPONSIVENESS ========== */
@@ -1055,9 +1004,8 @@ main {
 .sidebar-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  z-index: 800;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 95;
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--transition-normal);
@@ -1075,28 +1023,18 @@ main {
 
   #sidebar {
     position: fixed;
-    left: 0;
+    left: -280px;
     top: 0;
     bottom: 0;
-    z-index: 850;
-    transform: translateX(-100%);
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+    box-shadow: 4px 0 24px var(--shadow);
   }
 
   #sidebar.open {
-    transform: translateX(0);
+    left: 0;
   }
 
-  /* Adjust main content to take full width since sidebar is hidden */
-  main {
-    width: 100%;
-    margin-left: 0;
-  }
-
-  /* Adjust grid for mobile */
-  .grid-view {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 12px;
+  #contentArea {
     padding: 16px;
   }
 
