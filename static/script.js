@@ -62,21 +62,35 @@ function bindUI() {
   el('doRegisterBtn').addEventListener('click', doRegister);
   el('showRegister').addEventListener('click', (e) => { e.preventDefault(); toggleAuthMode('register'); });
   el('showLogin').addEventListener('click', (e) => { e.preventDefault(); toggleAuthMode('login'); });
-  el('logoutBtn').addEventListener('click', logout);
+
+  // Logout - support both old (if exists) and new dropdown
+  el('logoutBtn')?.addEventListener('click', logout);
+  el('logoutBtnDropdown')?.addEventListener('click', logout);
 
   // Main UI
   el('viewToggle').addEventListener('click', toggleView);
   el('file').addEventListener('change', upload);
-  el('qrOpenSettings')?.addEventListener('click', showQRModal);
-  el('openSettings').addEventListener('click', toggleSettings);
-  el('saveProfileBtn')?.addEventListener('click', saveProfileName);
   el('newFolderBtn').addEventListener('click', createFolderPrompt);
   el('search').addEventListener('input', renderFiles);
+
+  // Profile Dropdown (Google Photos Style)
+  el('profileBtn')?.addEventListener('click', toggleProfileDropdown);
+  el('themeSelectDropdown')?.addEventListener('change', handleThemeSelectDropdown);
+  el('saveProfileBtnDropdown')?.addEventListener('click', saveProfileNameDropdown);
+  el('qrOpenDropdown')?.addEventListener('click', showQRModal);
+
+  // Old settings drawer (if still used)
+  el('openSettings')?.addEventListener('click', toggleSettings);
+  el('saveProfileBtn')?.addEventListener('click', saveProfileName);
+  el('qrOpenSettings')?.addEventListener('click', showQRModal);
   el('themeSelect')?.addEventListener('change', handleThemeSelect);
 
   // Mobile
   el('menuBtn')?.addEventListener('click', toggleSidebar);
   el('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', handleClickOutside);
 
   // Keyboard
   document.addEventListener('keydown', handleKeyboard);
@@ -247,21 +261,68 @@ function loadProfileName() {
   const display = localStorage.getItem('mycloud_profile_name') || user;
 
   el('profileName').textContent = display;
-  el('profileNameDrawer').textContent = display;
-  el('profileNameInput').value = display;
+  el('profileNameDrawer')?.textContent = display;
+  el('profileNameInput')?.value = display;
+  el('dropdownProfileName')?.textContent = display;
+  el('dropdownProfileNameInput')?.value = display;
 
   const init = display.charAt(0).toUpperCase();
   el('profilePic').textContent = init;
-  el('profilePicDrawer').textContent = init;
+  el('profilePicDrawer')?.textContent = init;
+  el('topbarProfileInitial')?.textContent = init;
+  el('dropdownProfileInitial')?.textContent = init;
 }
 
 function saveProfileName() {
-  const name = el('profileNameInput').value.trim();
+  const name = el('profileNameInput')?.value.trim();
   if (name) {
     localStorage.setItem('mycloud_profile_name', name);
     loadProfileName();
     alert('Name updated');
   }
+}
+
+function saveProfileNameDropdown() {
+  const name = el('dropdownProfileNameInput')?.value.trim();
+  if (name) {
+    localStorage.setItem('mycloud_profile_name', name);
+    loadProfileName();
+    toggleProfileDropdown(); // Close dropdown
+  }
+}
+
+function toggleProfileDropdown() {
+  const dropdown = el('profileDropdown');
+  if (dropdown) {
+    dropdown.classList.toggle('hidden');
+  }
+}
+
+function handleClickOutside(e) {
+  const dropdown = el('profileDropdown');
+  const profileBtn = el('profileBtn');
+  if (dropdown && profileBtn && !dropdown.contains(e.target) && !profileBtn.contains(e.target)) {
+    dropdown.classList.add('hidden');
+  }
+}
+
+function handleThemeSelectDropdown(e) {
+  const value = e.target.value;
+  applyTheme(value);
+  localStorage.setItem('mycloud_theme', value);
+}
+
+function applyTheme(theme) {
+  if (theme === 'dark') {
+    el('app').classList.add('theme-dark');
+    el('app').classList.remove('theme-light');
+  } else {
+    el('app').classList.add('theme-light');
+    el('app').classList.remove('theme-dark');
+  }
+  // Sync dropdowns
+  if (el('themeSelectDropdown')) el('themeSelectDropdown').value = theme;
+  if (el('themeSelect')) el('themeSelect').value = theme;
 }
 
 // ========== MAIN DATA LOOP ==========
@@ -305,6 +366,14 @@ function updateStorageUI() {
 
   el('storageAmount').textContent = `${total_size_formatted} of ${quota_formatted}`;
   el('storageFill').style.width = `${Math.min(usage_percent, 100)}%`;
+
+  // Dropdown storage mini
+  if (el('storageFillDropdown')) {
+    el('storageFillDropdown').style.width = `${Math.min(usage_percent, 100)}%`;
+  }
+  if (el('storageTextDropdown')) {
+    el('storageTextDropdown').textContent = `${total_size_formatted} / ${quota_formatted}`;
+  }
 
   // Breakdown
   el('storageBreakdown').innerHTML = `
@@ -517,20 +586,21 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 function handleThemeSelect(e) {
-  if (e.target.value === 'dark') {
-    el('app').classList.add('theme-dark');
-    el('app').classList.remove('theme-light');
-  } else {
-    el('app').classList.add('theme-light');
-    el('app').classList.remove('theme-dark');
-  }
+  applyTheme(e.target.value);
+  localStorage.setItem('mycloud_theme', e.target.value);
 }
-function setThemeFromStorage() { /* ... */ }
+function setThemeFromStorage() {
+  const saved = localStorage.getItem('mycloud_theme') || 'light';
+  applyTheme(saved);
+}
 function buildFolderList(folders) {
   const ul = el('folderList');
   ul.innerHTML = '<li class="folder-item active">All Files</li>';
   // Add logic if desired
 }
-function showQRModal() { el('qrModal').classList.remove('hidden'); }
+function showQRModal() {
+  el('qrModal').classList.remove('hidden');
+  el('profileDropdown')?.classList.add('hidden'); // Close dropdown when opening QR
+}
 function hideQRModal() { el('qrModal').classList.add('hidden'); }
 function handleModalClick(e) { if (e.target === e.currentTarget) e.target.classList.add('hidden'); }

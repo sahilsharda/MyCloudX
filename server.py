@@ -148,18 +148,24 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/files", StaticFiles(directory=UPLOAD_DIR), name="files")
 templates = Jinja2Templates(directory=TEMPLATE_DIR)
 
-# CORS setup - Hardened to allow only Localhost and LAN
+# CORS setup - Allow localhost, LAN, and Cloudflare tunnel
 ALLOWED_ORIGINS = [
     "http://localhost",
     "http://localhost:8000",
     "http://127.0.0.1",
     "http://127.0.0.1:8000",
-    # Add your production domain here when ready
 ]
+
+# Read Cloudflare URL if available and add to CORS
+if os.path.exists("public_url.txt"):
+    with open("public_url.txt") as f:
+        cf_url = f.read().strip()
+        if cf_url:
+            ALLOWED_ORIGINS.append(cf_url)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"],  # Allow all origins for tunnel access
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

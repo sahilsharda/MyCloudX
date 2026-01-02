@@ -8,3 +8,6 @@ dist/
 build/
 *.pyc
 __pycache__/
+.venv/
+uploads/
+*.log

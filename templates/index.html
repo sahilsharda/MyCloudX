@@ -8,7 +8,7 @@
   <meta name="description" content="Modern cloud storage inspired by Google Photos and iCloud" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=12">
+  <link rel="stylesheet" href="/static/style.css?v=15">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 </head>
@@ -99,11 +99,7 @@
         </ul>
       </div>
 
-      <div class="sidebar-bottom">
-        <button id="openSettings" class="icon-btn settings-btn" title="Settings">
-          <span class="material-icons-round">settings</span>
-        </button>
-      </div>
+      <!-- Removed: Settings button moved to topbar profile dropdown -->
     </aside>
 
     <!-- MAIN -->
@@ -123,6 +119,57 @@
           <button id="viewToggle" class="icon-btn" title="Toggle grid/list">
             <span class="material-icons-round" id="viewIcon">grid_view</span>
           </button>
+          <!-- Profile Avatar (Google Photos Style) -->
+          <div class="profile-wrapper">
+            <button id="profileBtn" class="profile-avatar-btn" title="Account">
+              <span id="topbarProfileInitial">M</span>
+            </button>
+            <!-- Profile Dropdown -->
+            <div id="profileDropdown" class="profile-dropdown hidden">
+              <div class="dropdown-header">
+                <div class="dropdown-avatar">
+                  <span id="dropdownProfileInitial">M</span>
+                </div>
+                <div class="dropdown-user-info">
+                  <div id="dropdownProfileName" class="dropdown-name">My Cloud</div>
+                  <div class="dropdown-email muted">Logged in</div>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-section">
+                <label class="dropdown-label">Display Name</label>
+                <input id="dropdownProfileNameInput" type="text" class="dropdown-input" placeholder="Enter your name" />
+                <button id="saveProfileBtnDropdown" class="btn dropdown-btn-small">Save</button>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-section">
+                <label class="dropdown-label">Theme</label>
+                <select id="themeSelectDropdown" class="dropdown-input">
+                  <option value="light">Light Mode</option>
+                  <option value="dark">Dark Mode</option>
+                </select>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-section">
+                <label class="dropdown-label">Storage</label>
+                <div class="storage-mini">
+                  <div class="storage-bar-mini">
+                    <div class="storage-fill-mini" id="storageFillDropdown" style="width: 0%"></div>
+                  </div>
+                  <span class="storage-text-mini" id="storageTextDropdown">0 B / 10 GB</span>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <button id="qrOpenDropdown" class="dropdown-action-btn">
+                <span class="material-icons-round">qr_code</span>
+                Connect Device
+              </button>
+              <button id="logoutBtnDropdown" class="dropdown-action-btn logout-btn">
+                <span class="material-icons-round">logout</span>
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -223,73 +270,10 @@
       </div>
     </div>
 
-    <!-- Settings Drawer -->
-    <div id="settingsDrawer" class="settings-drawer hidden">
-      <div class="settings-header">
-        <div class="profile-drawer">
-          <div id="profilePicDrawer" class="profile-pic">M</div>
-          <div>
-            <div id="profileNameDrawer" class="profile-name">My Cloud</div>
-            <div class="muted small">Logged in</div>
-          </div>
-        </div>
-        <button class="icon-btn" onclick="toggleSettings()" title="Close" style="margin-left: auto;">
-          <span class="material-icons-round">close</span>
-        </button>
-      </div>
-      <div class="settings-body">
-        <h4>Profile</h4>
-        <div class="setting-row">
-          <label>Display Name</label>
-          <input id="profileNameInput" type="text" placeholder="Enter your name" />
-          <button id="saveProfileBtn" class="btn" style="margin-top: 8px; width: 100%;">Save Name</button>
-        </div>
-
-        <h4 style="margin-top: 20px;">Account</h4>
-        <div class="setting-row">
-          <button id="logoutBtn" class="btn btn-secondary" style="width: 100%;">Logout</button>
-        </div>
-
-        <h4 style="margin-top: 20px;">
-          <span class="material-icons-round"
-            style="font-size: 16px; vertical-align: middle; margin-right: 4px;">palette</span>
-          Appearance
-        </h4>
-        <div class="setting-row">
-          <label>Theme</label>
-          <select id="themeSelect">
-            <option value="light">Light Mode</option>
-            <option value="dark">Dark Mode</option>
-          </select>
-        </div>
-
-        <h4 style="margin-top: 20px;">Storage</h4>
-        <div class="setting-row">
-          <label>Storage Quota</label>
-          <div class="muted small">Current: <span id="quotaDisplay">10 GB</span></div>
-        </div>
-        <div class="setting-row">
-          <div id="storageWarning" class="storage-warning hidden">
-            <span class="material-icons-round" style="font-size: 16px;">warning</span>
-            <span>Storage is running low!</span>
-          </div>
-        </div>
-
-        <h4 style="margin-top: 20px;">Connection</h4>
-        <div class="setting-row">
-          <label>Device Connection</label>
-          <button id="qrOpenSettings" class="btn btn-secondary" style="width: 100%;">
-            <span class="material-icons-round"
-              style="font-size: 18px; vertical-align: middle; margin-right: 8px;">qr_code</span>
-            Show QR Code
-          </button>
-        </div>
-      </div>
-    </div>
 
   </div>
 
-  <script src="/static/script.js?v=13"></script>
+  <script src="/static/script.js?v=15"></script>
 </body>
 
 </html>
