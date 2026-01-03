@@ -1,13 +1,23 @@
-INFO:     Started server process [66198]
+INFO:     Started server process [23822]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-ERROR:    [Errno 48] error while attempting to bind on address ('0.0.0.0', 8000): [errno 48] address already in use
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-
-🌐 MyCloudX is live at:
-
-➡️  Localhost: http://127.0.0.1:8000
-➡️  Wi-Fi LAN: http://20.20.23.200:8000
-➡️  Cloudflare: https://polar-beijing-peter-fixtures.trycloudflare.com
-
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:64527 - "GET / HTTP/1.1" 200 OK
+INFO:     103.155.2.10:0 - "GET / HTTP/1.1" 200 OK
+INFO:     103.155.2.10:0 - "GET /static/style.css?v=15 HTTP/1.1" 200 OK
+INFO:     103.155.2.10:0 - "GET /static/script.js?v=15 HTTP/1.1" 200 OK
+INFO:     103.155.2.10:0 - "GET /qr HTTP/1.1" 200 OK
+INFO:     103.155.2.10:0 - "GET /static/assets/login_bg.png HTTP/1.1" 200 OK
+INFO:     103.155.2.10:0 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51368 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51369 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51369 - "GET /static/style.css?v=15 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51368 - "GET /static/script.js?v=15 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51368 - "GET /qr HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51369 - "GET /qr HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51368 - "GET /static/assets/login_bg.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52218 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52219 - "GET /static/script.js?v=15 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52218 - "GET /static/style.css?v=15 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52219 - "GET /static/assets/login_bg.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52218 - "GET /qr HTTP/1.1" 200 OK
